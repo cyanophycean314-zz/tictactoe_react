@@ -1,0 +1,9 @@
+{
+  "name": "tictactoe_react",
+  "version": "1.0.0",
+  "description": "A Tic Tac Toe game with React based off Dan Abramov's one",
+  "main": "index.js",
+  "repository": "git@github.com:cyanophycean314/tictactoe_react.git",
+  "author": "Kevin Fei",
+  "license": "MIT"
+}
