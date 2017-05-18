@@ -5,5 +5,20 @@
   "main": "index.js",
   "repository": "git@github.com:cyanophycean314/tictactoe_react.git",
   "author": "Kevin Fei",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@types/react": "^15.0.24",
+    "@types/react-dom": "^15.5.0",
+    "react": "^15.5.4",
+    "react-dom": "^15.5.4",
+    "webpack": "^2.5.1"
+  },
+  "devDependencies": {
+    "awesome-typescript-loader": "^3.1.3",
+    "source-map-loader": "^0.2.1",
+    "typescript": "^2.3.2"
+  },
+  "scripts": {
+    "build": "webpack"
+  }
 }
