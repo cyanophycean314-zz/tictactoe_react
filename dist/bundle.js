@@ -90,24 +90,179 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var React = __webpack_require__(0);
-// 'HelloProps' describes the shape of props.
-// State is never set so we use the 'undefined' type.
-var Hello = (function (_super) {
-    __extends(Hello, _super);
-    function Hello() {
+var Square = (function (_super) {
+    __extends(Square, _super);
+    function Square() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Hello.prototype.render = function () {
-        return React.createElement("h1", null,
-            "Hello from ",
-            this.props.compiler,
-            " and ",
-            this.props.framework,
-            "!");
+    Square.prototype.render = function () {
+        var _this = this;
+        return (React.createElement("button", { className: "square", onClick: function () { console.log(_this.props.dank); _this.props.onClick(); } }, this.props.dank));
     };
-    return Hello;
+    return Square;
 }(React.Component));
-exports.Hello = Hello;
+var Board = (function (_super) {
+    __extends(Board, _super);
+    function Board() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Board.prototype.renderSquare = function (i) {
+        var _this = this;
+        console.log(this.props.squares);
+        return (React.createElement(Square, { key: i, dank: this.props.squares[i], onClick: function () { return _this.props.onClick(i); } }));
+    };
+    Board.prototype.render = function () {
+        var _this = this;
+        var BoardRow = function (props) {
+            var rowsquares = [];
+            for (var i = 0; i < props.N; i++) {
+                rowsquares.push(_this.renderSquare(i + props.start));
+            }
+            console.log(rowsquares);
+            return (React.createElement("div", { className: "board-row" }, rowsquares));
+        };
+        var board = [];
+        for (var i = 0; i < this.props.N; i++) {
+            board.push(React.createElement(BoardRow, { key: i * this.props.N, N: this.props.N, start: i * this.props.N }));
+        }
+        return React.createElement("div", null, board);
+    };
+    return Board;
+}(React.Component));
+var N = 3;
+var Game = (function (_super) {
+    __extends(Game, _super);
+    function Game() {
+        var _this = _super.call(this) || this;
+        var N = 3;
+        var emptysquares = [];
+        for (var i = 0; i < N * N; i++) {
+            emptysquares.push(null);
+        }
+        _this.state = {
+            history: [{
+                    squares: emptysquares
+                }],
+            stepNumber: 0,
+            xIsNext: true
+        };
+        console.log(_this.state.history);
+        return _this;
+    }
+    Game.prototype.handleClick = function (i) {
+        var history = this.state.history.slice(0, this.state.stepNumber + 1);
+        var current = history[history.length - 1];
+        var squares = current.squares.slice();
+        if (calculateWinner(squares) || squares[i]) {
+            return;
+        }
+        squares[i] = this.state.xIsNext ? 'X' : 'O';
+        this.setState({
+            history: history.concat([{
+                    squares: squares
+                }]),
+            stepNumber: history.length,
+            xIsNext: !this.state.xIsNext,
+        });
+    };
+    Game.prototype.jumpTo = function (step) {
+        this.setState({
+            stepNumber: step,
+            xIsNext: (step % 2) ? false : true,
+        });
+    };
+    Game.prototype.render = function () {
+        var _this = this;
+        var history = this.state.history;
+        var current = history[this.state.stepNumber];
+        console.log('CURRENT');
+        console.log(history, current);
+        var status = getStatus(current.squares, this.state.xIsNext);
+        var moves = history.map(function (step, move) {
+            var desc;
+            if (move == 0) {
+                desc = React.createElement("p", null, "Game Start");
+            }
+            else if (move === _this.state.stepNumber) {
+                desc = React.createElement("b", null,
+                    "Move #",
+                    move);
+            }
+            else {
+                desc = React.createElement("p", null,
+                    "Move #",
+                    move);
+            }
+            return (React.createElement("li", { key: move },
+                React.createElement("a", { href: "#", onClick: function () { return _this.jumpTo(move); } }, desc)));
+        });
+        return (React.createElement("div", { className: "game" },
+            React.createElement("div", { className: "game-board" },
+                React.createElement(Board, { N: N, squares: current.squares, onClick: function (i) { return _this.handleClick(i); } })),
+            React.createElement("div", { className: "game-info" },
+                React.createElement("div", null,
+                    " ",
+                    status,
+                    " "),
+                React.createElement("ol", null,
+                    " ",
+                    moves,
+                    " "))));
+    };
+    return Game;
+}(React.Component));
+exports.Game = Game;
+function calculateWinner(squares) {
+    //Check rows and columns, i is row/col number, j are entries along that
+    for (var i = 0; i < N; i++) {
+        var x0 = squares[i * N];
+        for (var j = 1; x0 && j < N; j++) {
+            if (squares[i * N + j] !== squares[i * N + j - 1]) {
+                x0 = null;
+            }
+        }
+        if (x0)
+            return x0;
+        var y0 = squares[i];
+        for (var j = 1; y0 && j < N; j++) {
+            if (squares[i + N * j] !== squares[i + N * (j - 1)]) {
+                y0 = null;
+            }
+        }
+        if (y0)
+            return y0;
+    }
+    var diagl0 = squares[0], diagr0 = squares[N - 1];
+    for (var i = 1; (diagl0 || diagr0) && i < N; i++) {
+        if (squares[i + N * i] !== squares[i + N * (i - 1)]) {
+            diagl0 = null;
+        }
+        if (squares[(N - i - 1) + N * i] !== squares[(N - i) + N * (i - 1)]) {
+            diagr0 = null;
+        }
+    }
+    if (diagl0 || diagr0) {
+        return diagl0 || diagr0;
+    }
+    if (squares.indexOf(null) == -1) {
+        return "tie";
+    }
+    return null;
+}
+function getStatus(squares, xIsNext) {
+    var winner = calculateWinner(squares);
+    if (winner) {
+        return "Winner: " + winner;
+    }
+    else {
+        if (squares.indexOf(null) == -1) {
+            return "Tie Game";
+        }
+        else {
+            return 'Next player: ' + (xIsNext ? 'X' : 'O');
+        }
+    }
+}
 
 
 /***/ }),
@@ -125,8 +280,8 @@ module.exports = ReactDOM;
 Object.defineProperty(exports, "__esModule", { value: true });
 var React = __webpack_require__(0);
 var ReactDOM = __webpack_require__(2);
-var Hello_1 = __webpack_require__(1);
-ReactDOM.render(React.createElement(Hello_1.Hello, { compiler: "TypeScript", framework: "React" }), document.getElementById("example"));
+var Game_1 = __webpack_require__(1);
+ReactDOM.render(React.createElement(Game_1.Game, null), document.getElementById("root"));
 
 
 /***/ })
