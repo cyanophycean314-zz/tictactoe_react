@@ -2,14 +2,14 @@ import * as React from 'react';
 
 interface squareprops {
     onClick(): void,
-    dank: string
+    value: string
 }
 
 class Square extends React.Component<squareprops, null> {
     render() {
         return (
-            <button className="square" onClick={() => {console.log(this.props.dank); this.props.onClick()}}>
-                {this.props.dank}
+            <button className="square" onClick={() => {console.log(this.props.value); this.props.onClick()}}>
+                {this.props.value}
             </button>
         );        
     }
@@ -27,7 +27,7 @@ class Board extends React.Component<boardprops, null> {
         return (
             <Square
                 key={i}
-                dank={this.props.squares[i]}
+                value={this.props.squares[i]}
                 onClick={()=>this.props.onClick(i)}
             />
         );
@@ -72,6 +72,79 @@ interface gamestate {
     xIsNext: boolean
 }
 
+interface gameinfoprops {
+    state: gamestate,
+    jumpTo(i: number) : void,
+}
+
+interface movelistprops {
+    history: boardpieces[],
+    stepNumber: number,
+    jumpTo(i : number) : void
+}
+
+interface moveliststate {
+    reverse: boolean
+}
+
+class MoveList extends React.Component<movelistprops, moveliststate> {
+    constructor() {
+        super();
+        this.state = {
+            reverse: false
+        };
+    }
+
+    handleChange(event : React.FormEvent<HTMLInputElement>) {
+        let checkbox = event.target as HTMLInputElement;
+        this.setState({reverse: checkbox.checked});
+    }
+
+    render() {
+        const moves : JSX.Element[] = this.props.history.map((step: boardpieces, move: number) => {
+            let desc : JSX.Element;
+            if (move == 0) {
+                desc = <p>Game Start</p>;
+            } else if (move === this.props.stepNumber) {
+                desc = <b>Move #{move}</b>;
+            } else {
+                desc = <p>Move #{move}</p>;
+            }
+            return (
+                <li key={move}>
+                    <a href="#" onClick={()=>this.props.jumpTo(move)}>{desc}</a>
+                </li>
+            );
+        })
+
+        return (<div className="move-list">
+            <label> <input type="checkbox" checked={this.state.reverse} onChange={this.handleChange} /> </label>
+            <ol>{moves}</ol>
+            </div>)
+    }
+}
+
+class GameInfo extends React.Component<gameinfoprops, null> {
+    render() {
+        let cState : gamestate = this.props.state;
+        
+        const current : boardpieces = cState.history[cState.stepNumber];
+        const status : string = getStatus(current.squares, cState.xIsNext);
+
+        return (
+            <div className="game-info">
+                <h4>{status}</h4>
+                <MoveList
+                    history={cState.history}
+                    stepNumber={cState.stepNumber}
+                    jumpTo = {(i) => this.props.jumpTo(i)}
+                />
+            </div>
+        );
+    }
+}
+
+
 class Game extends React.Component<null, gamestate> {
     constructor() {
         super();
@@ -115,25 +188,6 @@ class Game extends React.Component<null, gamestate> {
     render() {
         const history : boardpieces[] = this.state.history;
         const current : boardpieces = history[this.state.stepNumber];
-        console.log('CURRENT');
-        console.log(history, current);
-        const status : string = getStatus(current.squares, this.state.xIsNext);
-
-        const moves : JSX.Element[] = history.map((step: boardpieces, move: number) => {
-            let desc : JSX.Element;
-            if (move == 0) {
-                desc = <p>Game Start</p>;
-            } else if (move === this.state.stepNumber) {
-                desc = <b>Move #{move}</b>;
-            } else {
-                desc = <p>Move #{move}</p>;
-            }
-            return (
-                <li key={move}>
-                    <a href="#" onClick={()=>this.jumpTo(move)}>{desc}</a>
-                </li>
-            );
-        })
 
         return (
             <div className="game">
@@ -145,8 +199,10 @@ class Game extends React.Component<null, gamestate> {
                     />
                 </div>
                 <div className="game-info">
-                    <div> {status} </div>
-                    <ol> {moves} </ol>
+                    <GameInfo
+                        state = {this.state}
+                        jumpTo = {(i) => this.jumpTo(i)}
+                    />
                 </div>
             </div>
         );
