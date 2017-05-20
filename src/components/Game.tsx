@@ -8,7 +8,7 @@ interface squareprops {
 class Square extends React.Component<squareprops, null> {
     render() {
         return (
-            <button className="square" onClick={() => {console.log(this.props.value); this.props.onClick()}}>
+            <button className="square" onClick={this.props.onClick}>
                 {this.props.value}
             </button>
         );        
@@ -23,7 +23,6 @@ interface boardprops {
 
 class Board extends React.Component<boardprops, null> {
     renderSquare(i: number) {
-        console.log(this.props.squares)
         return (
             <Square
                 key={i}
@@ -44,7 +43,6 @@ class Board extends React.Component<boardprops, null> {
             for (let i = 0; i < props.N; i++) {
                 rowsquares.push(this.renderSquare(i + props.start))
             }
-            console.log(rowsquares);
             return (<div className="board-row">
                 {rowsquares}
                 </div>
@@ -75,12 +73,14 @@ interface gamestate {
 interface gameinfoprops {
     state: gamestate,
     jumpTo(i: number) : void,
+    calculateWinner(squares: string[]) : string,
 }
 
 interface movelistprops {
     history: boardpieces[],
     stepNumber: number,
-    jumpTo(i : number) : void
+    jumpTo(i : number) : void,
+    calculateWinner(squares: string[]) : string
 }
 
 interface moveliststate {
@@ -116,20 +116,39 @@ class MoveList extends React.Component<movelistprops, moveliststate> {
                 </li>
             );
         })
+        if (this.state.reverse) {
+            moves.reverse();
+        }
 
         return (<div className="move-list">
-            <label> <input type="checkbox" checked={this.state.reverse} onChange={this.handleChange} /> </label>
+            <label> Reverse Order
+                <input type="checkbox"
+                    checked={this.state.reverse}
+                    onChange={(event : React.FormEvent<HTMLInputElement>) => {this.handleChange(event)}} /> </label>
             <ol>{moves}</ol>
             </div>)
     }
 }
 
 class GameInfo extends React.Component<gameinfoprops, null> {
+    getStatus(squares: string[], xIsNext: boolean) : string {
+        let winner : string = this.props.calculateWinner(squares);
+        if (winner) {
+            return `Winner: ${winner}`;
+        } else {
+            if (squares.indexOf(null) == -1) {
+                return `Tie Game`;
+            } else {
+                return 'Next player: ' + (xIsNext ? 'X' : 'O');
+            }
+        }
+    }    
+
     render() {
         let cState : gamestate = this.props.state;
         
         const current : boardpieces = cState.history[cState.stepNumber];
-        const status : string = getStatus(current.squares, cState.xIsNext);
+        const status : string = this.getStatus(current.squares, cState.xIsNext);
 
         return (
             <div className="game-info">
@@ -138,6 +157,7 @@ class GameInfo extends React.Component<gameinfoprops, null> {
                     history={cState.history}
                     stepNumber={cState.stepNumber}
                     jumpTo = {(i) => this.props.jumpTo(i)}
+                    calculateWinner = {this.props.calculateWinner}
                 />
             </div>
         );
@@ -158,14 +178,52 @@ class Game extends React.Component<null, gamestate> {
             stepNumber : 0,
             xIsNext : true
         };
-        console.log(this.state.history)
     }
+
+    calculateWinner(squares: string[]) : string {
+        //Check rows and columns, i is row/col number, j are entries along that
+        for (let i = 0; i < N; i++) {
+            let x0 : string = squares[i*N];
+            for (let j = 1; x0 && j < N; j++) {
+                if (squares[i*N + j] !== squares[i*N + j-1]) {
+                    x0 = null;
+                }
+            }
+            if (x0)
+                return x0;
+            let y0: string = squares[i];
+            for (let j = 1; y0 && j < N; j++) {
+                if (squares[i+N*j] !== squares[i+N*(j-1)]) {
+                    y0 = null;
+                }
+            }
+            if (y0)
+                return y0;
+        }
+
+        let diagl0 : string = squares[0], diagr0 : string = squares[N-1];
+        for (let i = 1; (diagl0 || diagr0) && i < N; i++) {
+            if (squares[i+N*i] !== squares[i+N*(i-1)]) {
+                diagl0 = null;
+            }
+            if (squares[(N-i-1) + N*i] !== squares[(N-i) + N*(i-1)]) {
+                diagr0 = null;
+            }
+        }
+        if (diagl0 || diagr0) {
+            return diagl0 || diagr0;
+        }
+        if (squares.indexOf(null) == -1) {
+            return "tie";
+        }
+        return null;
+    }    
 
     handleClick(i: number) {
         const history : boardpieces[] = this.state.history.slice(0, this.state.stepNumber + 1);
         const current : boardpieces = history[history.length - 1];
         const squares : string[] = current.squares.slice();
-        if (calculateWinner(squares) || squares[i]) {
+        if (this.calculateWinner(squares) || squares[i]) {
             return;
         }
         squares[i] = this.state.xIsNext ? 'X' : 'O';
@@ -202,62 +260,11 @@ class Game extends React.Component<null, gamestate> {
                     <GameInfo
                         state = {this.state}
                         jumpTo = {(i) => this.jumpTo(i)}
+                        calculateWinner={this.calculateWinner}
                     />
                 </div>
             </div>
         );
-    }
-}
-
-function calculateWinner(squares: string[]) : string {
-    //Check rows and columns, i is row/col number, j are entries along that
-    for (let i = 0; i < N; i++) {
-        let x0 : string = squares[i*N];
-        for (let j = 1; x0 && j < N; j++) {
-            if (squares[i*N + j] !== squares[i*N + j-1]) {
-                x0 = null;
-            }
-        }
-        if (x0)
-            return x0;
-        let y0: string = squares[i];
-        for (let j = 1; y0 && j < N; j++) {
-            if (squares[i+N*j] !== squares[i+N*(j-1)]) {
-                y0 = null;
-            }
-        }
-        if (y0)
-            return y0;
-    }
-
-    let diagl0 : string = squares[0], diagr0 : string = squares[N-1];
-    for (let i = 1; (diagl0 || diagr0) && i < N; i++) {
-        if (squares[i+N*i] !== squares[i+N*(i-1)]) {
-            diagl0 = null;
-        }
-        if (squares[(N-i-1) + N*i] !== squares[(N-i) + N*(i-1)]) {
-            diagr0 = null;
-        }
-    }
-    if (diagl0 || diagr0) {
-        return diagl0 || diagr0;
-    }
-    if (squares.indexOf(null) == -1) {
-        return "tie";
-    }
-    return null;
-}
-
-function getStatus(squares: string[], xIsNext: boolean) : string {
-    let winner : string = calculateWinner(squares);
-    if (winner) {
-        return `Winner: ${winner}`;
-    } else {
-        if (squares.indexOf(null) == -1) {
-            return `Tie Game`;
-        } else {
-            return 'Next player: ' + (xIsNext ? 'X' : 'O');
-        }
     }
 }
 
